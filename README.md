@@ -1,4 +1,4 @@
-Aquí tienes el `README.md` actualizado con todas las implementaciones realizadas, el desafío de protocolo completado, y las respuestas a las preguntas de control.
+
 
 ```markdown
 # Laboratorio: Servicio de Conversión de Monedas con gRPC
