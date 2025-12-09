@@ -1,3 +1,6 @@
+Aquí tienes el `README.md` actualizado con todas las implementaciones realizadas, el desafío de protocolo completado, y las respuestas a las preguntas de control.
+
+```markdown
 # Laboratorio: Servicio de Conversión de Monedas con gRPC
 
 Este laboratorio guía a los estudiantes en la creación, implementación y uso de un servicio gRPC en Python.
@@ -6,26 +9,55 @@ Este laboratorio guía a los estudiantes en la creación, implementación y uso 
 
 **Objetivo:** Construir un servicio gRPC que convierta una cantidad entre monedas (p. ej. USD → EUR).
 
-**RPCs:**
+**RPCs Iniciales:**
 1.  **Convert** (Unary): Convierte una cantidad con una tasa dada por el servidor.
 2.  **GetSupportedCurrencies** (Server-Streaming): El servidor envía la lista de monedas soportadas.
 3.  **StreamRates** (Server-Streaming - Opcional): Envía actualizaciones periódicas de tasas simuladas.
 
+---
+
+##  Modificaciones e Implementaciones Realizadas 
+
+He expandido el servicio original para cumplir con todas las actividades sugeridas, logrando un servicio más robusto y conectado al mundo real.
+
+### 1. Extensión de Protocolo 
+
+Se agregó una nueva función RPC al servicio `CurrencyConverter`:
+
+* **Nuevo RPC:** **`GetRate`** (Unary)
+    * **Función:** Devuelve solo la tasa de conversión (ej., 1 USD = 0.92 EUR), sin realizar el cálculo de la cantidad.
+    * **Mensajes:** Utiliza `RateRequest` (input) y `RateReply` (output).
+
+### 2. Integración de API en Tiempo Real (Extensión)
+
+* **API Utilizada:** Se implementó la conexión a la **Frankfurter API** para obtener tasas de cambio en tiempo real.
+* **Lógica en `server.py`:** El método `Convert` (y `GetRate`) primero busca la tasa en el diccionario `SIMULATED_RATES` y, si no la encuentra (p. ej., para `USD -> CAD`), consulta automáticamente la API externa usando la librería `requests`.
+
+### 3. Modificación de Tasas y Funcionalidad
+
+* Se agregó soporte completo para la nueva moneda **Yen Japonés (JPY)**, actualizando las listas de monedas soportadas (`SUPPORTED`) y las tasas simuladas (`SIMULATED_RATES`).
+
+---
+
 ## 1. Estructura del Proyecto
 
 ```
+
 grpc-currency-lab/
 ├─ proto/
 │  └─ currency.proto
 ├─ server.py
 ├─ client.py
 ├─ requirements.txt
+├─ currency\_pb2.py      \<-- Archivo Generado
+├─ currency\_pb2\_grpc.py \<-- Archivo Generado
 └─ README.md
-```
+
+````
 
 ## 2. Definición del Servicio (.proto)
 
-El archivo `proto/currency.proto` define los mensajes y servicios. Ver el archivo incluido para más detalles.
+El archivo `proto/currency.proto` define los mensajes y servicios. La versión final incluye la nueva funcionalidad `GetRate`.
 
 ## 3. Preparación del Entorno
 
@@ -35,80 +67,67 @@ Se recomienda usar un entorno virtual (Conda o venv).
 
 ```bash
 pip install -r requirements.txt
-```
+````
+
 O manualmente:
+
 ```bash
 pip install grpcio grpcio-tools protobuf requests
 ```
 
-## 4. Generación de Stubs (Código Python desde Proto)
+## 4\. Generación de Stubs (Código Python desde Proto)
 
-Para que Python entienda el archivo `.proto`, debemos compilarlo. Desde la raíz del proyecto (`grpc-currency-lab/`), ejecuta:
+Para que Python entienda el archivo `.proto` (incluyendo `GetRate`), es **OBLIGATORIO** recompilar.
 
 ```bash
-python -m grpc_tools.protoc -I=./proto --python_out=. --grpc_python_out=. proto/currency.proto
+python -m grpc_tools.protoc -I ./proto --python_out=. --grpc_python_out=. proto/currency.proto
 ```
 
-Esto generará `currency_pb2.py` y `currency_pb2_grpc.py`.
-
-## 5. Implementación del Servidor (`server.py`)
+## 5\. Implementación del Servidor (`server.py`)
 
 El servidor implementa la clase `CurrencyConverterServicer`.
-- Usa un diccionario `SIMULATED_RATES` para las tasas de cambio.
-- Escucha en el puerto `50051`.
+
+  - Usa un diccionario `SIMULATED_RATES` para las tasas de cambio (incluyendo JPY).
+  - **Recurre a Frankfurter API si la tasa no es local.**
+  - Escucha en el puerto `50051`.
 
 Para iniciarlo:
+
 ```bash
 python server.py
 ```
 
-## 6. Implementación del Cliente (`client.py`)
+## 6\. Implementación del Cliente (`client.py`)
 
-El cliente se conecta al servidor y realiza llamadas a los métodos definidos.
+El cliente se conecta al servidor y realiza llamadas a los 6 métodos definidos, incluyendo pruebas para `GetRate` y la conexión API Real.
 
 Para ejecutarlo (en otra terminal):
+
 ```bash
 python client.py
 ```
 
-## 7. Actividades Sugeridas
+-----
 
-1.  **Modificar Tasas:** Agrega soporte para una nueva moneda (ej. JPY) en `server.py`.
-2.  **Manejo de Errores:** Observa qué pasa si pides una conversión de una moneda que no existe.
-3.  **API Real (Extensión):** Intenta conectar el servidor a una API pública de tasas de cambio.
-4.  **Desafío de Modificción de Protocolo (Importante):**
-    *   **Objetivo:** Agregar una nueva función `GetRate` que solo devuelva la tasa de cambio (sin convertir una cantidad).
-    *   **Pasos:**
-        1.  Modificar `proto/currency.proto`:
-            *   Crear mensajes `message RateRequest { string from_currency=1; string to_currency=2; }` y `message RateReply { double rate=1; }`.
-            *   Agregar el método `rpc GetRate(RateRequest) returns (RateReply);` al servicio.
-        2.  **Recompilar los stubs** (paso 4 de esta guía) para que se actualice `currency_pb2_grpc.py`.
-        3.  Implementar el método `GetRate` en `server.py`.
-        4.  Llamarlo desde `client.py`. (¡Si no recompilas, te dará error!)
+## 8\.  Respuestas a las Preguntas de Control
 
-## 8. Preguntas de Control
+### ¿Qué diferencia hay entre una RPC unary y server-streaming?
 
-- ¿Qué diferencia hay entre una RPC unary y server-streaming?
-- ¿Cómo manejarías el caso de una tasa no encontrada en el servidor?
+  * **RPC Unary** (`Convert`, `GetRate`): Es el modelo más simple. El **cliente envía un único mensaje** al servidor, y el **servidor responde con un único mensaje** al cliente. Este modelo se utiliza para solicitudes/respuestas simples, como una única conversión o la obtención de una sola tasa.
+  * **RPC Server-Streaming** (`GetSupportedCurrencies`, `StreamRates`): El **cliente envía un único mensaje** al servidor, pero el **servidor responde con una secuencia (stream) de mensajes**. Este modelo es ideal para enviar grandes listas de datos (como monedas soportadas) o feeds de datos continuos (como actualizaciones de tasas) a lo largo del tiempo.
 
-## 9. Sugerencias de APIs para Tasas en Tiempo Real
+### ¿Cómo manejarías el caso de una tasa no encontrada en el servidor?
 
-Para la actividad de extensión (conectar a una API Real), los estudiantes pueden utilizar una de las siguientes opciones gratuitas:
+El manejo de errores en gRPC es gestionado por el objeto `context` dentro del método del servidor:
 
-1.  **Frankfurter API** (Muy recomendada para estudiantes)
-    *   **Ventaja:** Totalmente gratuita, open-source, no requiere registro ni API Key.
-    *   **Ejemplo:** `GET https://api.frankfurter.app/latest?from=USD&to=EUR`
-    *   **Docs:** [frankfurter.app](https://www.frankfurter.app/docs/)
+1.  Se verifica si la tasa (`rate`) es `None` después de buscar en las tasas simuladas y en la API real.
+2.  Si la tasa no se encuentra, se establece un código de estado de error RPC estándar:
+      * `context.set_code(grpc.StatusCode.NOT_FOUND)`
+3.  Se proporciona información detallada sobre el error para el cliente:
+      * `context.set_details(f"Rate not found for {from_c} -> {to_c}")`
+4.  Se devuelve un objeto de respuesta vacío (`currency_pb2.ConvertReply()`) para finalizar la llamada RPC con el código de error.
 
-2.  **ExchangeRate-API**
-    *   **Ventaja:** Respuesta JSON limpia y fácil de parsear.
-    *   **Requisito:** Registro gratuito para obtener una API Key.
-    *   **Sitio:** [exchangerate-api.com](https://www.exchangerate-api.com/)
+Esto permite al cliente capturar el error como un `grpc.RpcError` y manejarlo de forma elegante (ej., mostrando un mensaje de error legible en lugar de fallar).
 
-3.  **Fixer.io**
-    *   **Ventaja:** Estándar en la industria.
-    *   **Requisito:** Registro (Plan gratuito con límite de requests).
-    *   **Sitio:** [fixer.io](https://fixer.io/)
-
-**Pista para la implementación:**
-En `server.py`, pueden importar la librería `requests` (ya incluida en `requirements.txt`) para hacer un `requests.get(url)` dentro de una función auxiliar, y actualizar el diccionario `SIMULATED_RATES` con los valores reales recibidos.
+```
+```
